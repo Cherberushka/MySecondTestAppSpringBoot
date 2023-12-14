@@ -20,31 +20,19 @@ public class Request {
      */
     @NotBlank (message = "uid не может быть пустым!")
     @Size(max = 32)
-    private String uid;
-
-    @NotBlank
-    @Size(max = 32)
-    private String operationUid;
-
-    private Systems systemName;
-
-    @NotBlank
-    private String systemTime;
-
-    private String source;
-    private Double salary;
-    private Double bonus;
-    private Integer workDays;
-
-    @Min(1)
-    @Max(100000)
-    private Integer communicationId;
-
-    private Integer templateId;
-
-    private Integer productCode;
-
-    private Integer smsCode;
+    private String uid; // Уникальный идентификатор сообщение
+    private String operationUid; // Уникальный идентификатор операции
+    private Systems systemName; // Имя системы отправителя
+    private String systemTime; // Время создания сообщения
+    private String source; // Наименование ресурса
+    private Positions position; // Должность
+    private Double salary; // Зарплата
+    private Double bonus; // Премия
+    private Integer workDays; // Рабочие дни
+    private Integer communicationId; // Уникальный идентификатор коммуникации
+    private Integer templateId; // Уникальный идентификатор шаблона
+    private Integer productCode; // Код продукта
+    private Integer smsCode; // Смс код
 
     @Override
     public String toString() {

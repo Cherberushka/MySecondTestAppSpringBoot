@@ -27,7 +27,11 @@ public class MyController {
     private final ModifyRequestService modifyRequestService;
 
     @Autowired
-    public MyController(ValidationService validationService, @Qualifier("ModifySystemTimeResponseService") ModifyResponseService modifyResponseService, ModifyRequestService modifyRequestService) {
+    public MyController(
+            ValidationService validationService,
+            @Qualifier("ModifySystemTimeResponseService") ModifyResponseService modifyResponseService,
+            @Qualifier("modifySystemNameRequestService") ModifyRequestService modifyRequestService
+    ) {
         this.validationService = validationService;
         this.modifyResponseService = modifyResponseService;
         this.modifyRequestService = modifyRequestService;
@@ -36,7 +40,24 @@ public class MyController {
     @PostMapping(value = "/feedback")
     public ResponseEntity<Response> feedback(@Valid @RequestBody Request request, BindingResult bindingResult) {
         log.info("Получен запрос обратной связи: {}", request);
-        Response response = Response.builder()
+        Response response = createDefaultResponse(request);
+
+        try {
+            validationService.isValid(bindingResult);
+        } catch (ValidationFailedException e) {
+            handleValidationException(e, response);
+        } catch (Exception e) {
+            handleUnknownException(e, response);
+        }
+
+        modifyServices(request, response);
+
+        log.info("Ответ: {}", response);
+        return new ResponseEntity<>(modifyResponseService.modify(response), HttpStatus.OK);
+    }
+
+    private Response createDefaultResponse(Request request) {
+        return Response.builder()
                 .uid(request.getUid())
                 .operationUid(request.getOperationUid())
                 .systemTime(DateTimeUtil.getCustomFormat().format(new Date()))
@@ -44,28 +65,26 @@ public class MyController {
                 .errorCode(ErrorCodes.EMPTY)
                 .errorMessage(ErrorMessages.EMPTY)
                 .build();
+    }
 
-        try {
-            validationService.isValid(bindingResult);
-        } catch (ValidationFailedException e) {
-            log.error("Ошибка валидации: {}", e.getMessage());
-            response.setCode(Codes.FAILED);
-            response.setErrorCode(ErrorCodes.VALIDATION_EXCEPTION);
-            response.setErrorMessage(ErrorMessages.VALIDATION);
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        } catch (Exception e) {
-            log.error("Произошла неизвестная ошибка: {}", e.getMessage());
-            response.setCode(Codes.FAILED);
-            response.setErrorCode(ErrorCodes.UNKNOWN_EXCEPTION);
-            response.setErrorMessage(ErrorMessages.UNKNOWN);
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    private void handleValidationException(ValidationFailedException e, Response response) {
+        log.error("Ошибка валидации: {}", e.getMessage());
+        response.setCode(Codes.FAILED);
+        response.setErrorCode(ErrorCodes.VALIDATION_EXCEPTION);
+        response.setErrorMessage(ErrorMessages.VALIDATION);
+    }
 
+    private void handleUnknownException(Exception e, Response response) {
+        log.error("Произошла неизвестная ошибка: {}", e.getMessage());
+        response.setCode(Codes.FAILED);
+        response.setErrorCode(ErrorCodes.UNKNOWN_EXCEPTION);
+        response.setErrorMessage(ErrorMessages.UNKNOWN);
+    }
+
+    private void modifyServices(Request request, Response response) {
         modifyResponseService.modify(response);
         modifyRequestService.modify(request);
-
-        log.info("Ответ: {}", response);
-        return new ResponseEntity<>(modifyResponseService.modify(response), HttpStatus.OK);
     }
+
 }
 
